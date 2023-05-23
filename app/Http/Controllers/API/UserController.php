@@ -20,19 +20,25 @@ class UserController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
-   
-        if($validator->fails()){
-            return Response(['message' => $validator->errors()], 401);
+    
+        if ($validator->fails()) {
+            return response(['message' => $validator->errors()], 401);
         }
-   
-        if(Auth::attempt($request->all())){
-            $user = Auth::user(); 
-            $success =  $user->createToken('MyApp')->plainTextToken; 
-            return Response(['token' => $success], 200);
+    
+        $credentials = $request->only(['email', 'password']);
+    
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            $success = [
+                'token' => $user->createToken('MyApp')->plainTextToken,
+                'usertype' => $user->usertype,
+            ];
+            return response($success, 200);
         }
-
-        return Response(['message' => 'email or password wrong'], 401);
+    
+        return response(['message' => 'Invalid email or password'], 401);
     }
+    
 
     /**
      * Store a newly created resource in storage.
@@ -44,6 +50,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6',
             'usertype' => 'required|in:admin,visitor',
+            'phoneno'  => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -62,12 +69,15 @@ class UserController extends Controller
      */
     public function userDetails(): Response
     {
-        if (Auth::check()) {
-            $user = Auth::user();
-            return Response(['data' => $user], 200);
+        try{
+            if (Auth::check()) {
+                $users = User::all();
+                return Response(['data' => $users], 200);
+            }
+            return Response(['message' => 'Unauthorized. Please log in.'], 400);
+        } catch(\Exception $e){
+            return response(['message' => 'Unauthorized access'], 400);
         }
-
-        return Response(['data' => 'Unauthorized'], 401);
     }
 
     /**
@@ -86,6 +96,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email,'.$id,
             'password' => 'required|min:6',
             'usertype' => 'required|in:admin,visitor',
+            'phoneno'  => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -95,6 +106,20 @@ class UserController extends Controller
         $user->update($request->all());
 
         return Response(['message' => 'User updated successfully'], 200);
+    }
+
+    public function toggleUserType($id): Response
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return Response(['message' => 'User not found'], 404);
+        }
+
+        $user->usertype = ($user->usertype === 'admin') ? 'visitor' : 'admin';
+        $user->save();
+
+        return Response(['message' => 'User usertype toggled successfully'], 200);
     }
 
     /**

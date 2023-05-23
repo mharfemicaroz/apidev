@@ -24,6 +24,7 @@ Route::post('user', [UserController::class, 'createUser']); // Add this route fo
 
 Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::get('user', [UserController::class, 'userDetails']);
+    Route::post('user/{id}/toggle-usertype', [UserController::class, 'toggleUserType']);
     Route::put('user/{id}', [UserController::class, 'updateUser']); // Add this route for updating a user
     Route::get('logout', [UserController::class, 'logout']);
 });
